@@ -1,16 +1,17 @@
 # Chatbot Político RAG - Sistema de Búsqueda de Documentos Políticos
 
-Sistema RAG especializado para procesar programas políticos de candidatos presidenciales. Extrae información estructurada, genera embeddings localmente y permite deploy a Qdrant Cloud para chatbots web.
+Sistema RAG especializado para procesar programas políticos de candidatos presidenciales. Extrae información estructurada, genera embeddings con OpenAI API y permite deploy directo a Qdrant Cloud para chatbots web.
 
 ## 🚀 Características
 
 - ✅ **Procesamiento político especializado**: Metadatos de candidatos, partidos, temas y páginas
 - ✅ **Chunking inteligente por páginas**: Respeta marcadores `[START OF PAGE: ##]` y `[END OF PAGE: ##]`
 - ✅ **Clasificación automática**: Detecta temas (salud, pensiones, educación) y tipos de propuestas
-- ✅ **Embeddings locales**: Sentence Transformers all-MiniLM-L6-v2 (384 dimensiones)
+- ✅ **Embeddings OpenAI**: text-embedding-3-small API (1536 dimensiones)
 - ✅ **Búsqueda vectorial**: FAISS IndexFlatIP para cosine similarity
 - ✅ **Export a Qdrant Cloud**: Formato compatible con deploy en cloud para chatbots web
-- ✅ **CLI completa**: Interface para indexar, buscar y exportar
+- ✅ **Upload directo**: Comando CLI integrado para subir a Qdrant Cloud
+- ✅ **CLI completa**: Interface para indexar, buscar, exportar y subir
 
 ## 📁 Estructura del Proyecto
 
@@ -19,23 +20,29 @@ script-data-process/
 ├── src/
 │   ├── __init__.py
 │   ├── config.py              # Configuración del sistema
-│   ├── document_processor.py  # Procesamiento político con metadatos
-│   ├── embeddings.py         # Generación de embeddings  
+│   ├── document_processor.py  # Procesamiento político con metadatos dinámicos
+│   ├── embeddings.py         # Generación de embeddings con OpenAI API  
 │   ├── vector_store.py       # FAISS vector store
-│   ├── rag_system.py         # Sistema RAG principal
+│   ├── rag_system.py         # Sistema RAG principal con contenido real
 │   ├── qdrant_exporter.py    # Export a formato Qdrant Cloud
-│   └── cli.py               # Interface CLI completa
-├── docs/                    # Documentos políticos (.md con page markers)
+│   └── cli.py               # Interface CLI completa con upload integrado
+├── docs/                    # 6 programas políticos (.md con page markers)
+│   ├── Programa_Eduardo_Artes.md
+│   ├── Programa_Evelyn_Matthei.md  
+│   ├── Programa_Harold_Mayne-Nicholls.md
+│   ├── Programa_Jeannette_Jara.md
+│   ├── Programa_Johannes_Kaiser.md
+│   └── Programa_Jose_Antonio_Kast_R.md
 ├── data/
 │   ├── faiss_index.faiss    # Índice vectorial FAISS
+│   ├── faiss_index_metadata.pkl  # Metadatos vectoriales
 │   ├── metadata.json        # Metadatos de chunks con info política
+│   ├── original_texts.json  # Textos originales para recuperación de contenido
 │   └── qdrant_export/       # Archivos para Qdrant Cloud
-│       ├── political_documents.json           # Datos vectoriales (3274 puntos)
-│       ├── upload_to_qdrant_cloud.py         # Script para subir a cloud
-│       ├── upload_political_documents.py     # Script local (legacy)
-│       ├── political_documents_filters_guide.md  # Guía de filtros y queries
-│       └── QDRANT_CLOUD_SETUP.md            # Guía paso a paso setup cloud
-├── models/                # Cache de modelos Sentence Transformers
+│       ├── political_documents.json           # Datos vectoriales (3274 puntos, 1536 dims)
+│       └── political_documents_filters_guide.md  # Guía de filtros y queries
+├── upload_to_qdrant_cloud.py  # Script manual para Qdrant Cloud (movido del data/)
+├── models/                # Cache de modelos (legacy Sentence Transformers)
 ├── requirements.txt    # Dependencias Python
 └── setup.py          # Configuración del paquete
 ```
@@ -60,15 +67,22 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 
+# Dependencias adicionales para Qdrant Cloud
+pip install qdrant-client openai
+
 # O instalar en modo desarrollo
 pip install -e .
 ```
 
-### 3. Configuración (opcional)
+### 3. Configuración requerida
 
 ```bash
-cp .env.example .env
-# Editar .env con tus configuraciones
+# Variables de entorno requeridas
+export OPENAI_API_KEY=tu_openai_api_key_aquí
+
+# Para upload a Qdrant Cloud (opcional)
+export QDRANT_API_KEY=tu_qdrant_api_key_aquí
+export QDRANT_URL=https://tu-cluster-url.qdrant.tech
 ```
 
 ## 🚀 Flujo de Uso Completo
@@ -76,68 +90,67 @@ cp .env.example .env
 ### 1. Procesar Documentos Políticos
 
 ```bash
-# PASO 1: Indexar documentos políticos (con metadatos automáticos)
+# PASO 1: Indexar documentos políticos (requiere OPENAI_API_KEY)
 python -m src.cli index
 
 # Resultado: 
+# - Extrae candidatos dinámicamente de nombres de archivo
 # - Extrae páginas usando [START OF PAGE: ##] markers
-# - Clasifica automáticamente temas (salud, pensiones, educación, etc.)
-# - Detecta tipos de propuestas (específicas, diagnósticos, metas)
-# - Genera embeddings de 384 dimensiones
-# - Crea índice FAISS local
+# - Clasifica automáticamente 9 temas (salud, pensiones, educación, etc.)
+# - Detecta 4 tipos de propuestas (específicas, diagnósticos, metas)
+# - Genera embeddings de 1536 dimensiones con OpenAI API
+# - Crea índice FAISS local + almacena contenido original
 
 # PASO 2: Verificar procesamiento
 python -m src.cli stats
-# Muestra: documentos procesados, chunks, candidatos, temas detectados
+# Muestra: 6 candidatos, 3274 chunks, 9 temas detectados automáticamente
 ```
 
-### 2. Exportar para Chatbot Web (Qdrant Cloud)
+### 2. Deploy a Qdrant Cloud
 
 ```bash
 # PASO 3: Exportar datos a formato Qdrant Cloud
 python -m src.cli export-qdrant
 
-# Esto genera 5 archivos en data/qdrant_export/:
-```
+# PASO 4: Upload directo a Qdrant Cloud (requiere credenciales)
+python -m src.cli upload-cloud
 
-**Archivos Generados Explicados:**
-
-1. **`political_documents.json`** (35MB aprox.)
-   - Contiene los 3,274 puntos vectoriales con embeddings
-   - Cada punto incluye: vector (384 dims), metadatos políticos, contenido
-   - Formato compatible con Qdrant Cloud
-
-2. **`upload_to_qdrant_cloud.py`** 
-   - Script optimizado para subir a Qdrant Cloud
-   - Usa API key y cluster URL
-   - Upload en batches de 64 puntos
-   - Manejo de errores y progreso
-
-3. **`upload_political_documents.py`** (legacy)
-   - Script para Qdrant local (localhost:6333)
-   - Usado para testing local con Docker
-
-4. **`political_documents_filters_guide.md`**
-   - Guía de cómo hacer queries con filtros políticos
-   - Ejemplos reales con "Jeannette Jara" y "Partido Socialista"
-   - Patterns para comparar candidatos, buscar por tema, etc.
-
-5. **`QDRANT_CLOUD_SETUP.md`**
-   - Guía paso a paso para crear cuenta en Qdrant Cloud
-   - Configuración de credenciales
-   - Instrucciones de deploy completas
-
-### 3. Deploy a Qdrant Cloud
-
-```bash
-# PASO 4: Configurar credenciales (después de crear cuenta en cloud.qdrant.io)
-set QDRANT_API_KEY=qdt_tu_api_key_aquí
-set QDRANT_URL=https://tu-cluster-url.qdrant.tech
-
-# PASO 5: Subir datos a cloud
-cd data/qdrant_export
+# Alternativamente, usar script manual:
 python upload_to_qdrant_cloud.py
 ```
+
+### 3. Comandos CLI Disponibles
+
+```bash
+# Ver todos los comandos
+python -m src.cli --help
+
+# Comandos disponibles:
+python -m src.cli index         # Indexar documentos con OpenAI embeddings
+python -m src.cli search        # Buscar en índice local  
+python -m src.cli stats         # Estadísticas del sistema
+python -m src.cli benchmark     # Pruebas de rendimiento
+python -m src.cli chat          # Modo chat interactivo
+python -m src.cli export-qdrant # Exportar a formato Qdrant Cloud
+python -m src.cli upload-cloud  # Upload directo a Qdrant Cloud
+```
+
+**Archivos de Export Generados:**
+
+1. **`political_documents.json`** (40MB aprox.)
+   - 3,274 puntos vectoriales con embeddings de 1536 dimensiones
+   - Contenido real de documentos (no placeholders)
+   - Metadatos políticos: 6 candidatos extraídos dinámicamente, 9 temas, 4 tipos de propuestas
+
+2. **`political_documents_filters_guide.md`**
+   - Guía de queries con filtros políticos específicos
+   - Ejemplos de búsqueda por candidato, tema, página
+   - Patterns para análisis político comparativo
+
+**Scripts de Upload:**
+
+- **CLI integrado**: `python -m src.cli upload-cloud` (recomendado)
+- **Script manual**: `python upload_to_qdrant_cloud.py` (alternativo)
 
 ### 4. Testing Local (Opcional)
 
@@ -154,41 +167,35 @@ python -m src.cli chat
 ### Variables de entorno (.env)
 
 ```bash
-# Modelo de embeddings
-EMBEDDING_MODEL=all-MiniLM-L6-v2
+# ⚠️ REQUERIDO: OpenAI API Key
+OPENAI_API_KEY=tu_openai_api_key_aquí
 
-# Parámetros de chunking
-CHUNK_SIZE=512
-CHUNK_OVERLAP=64
+# ⚠️ REQUERIDO para upload a Qdrant Cloud:
+QDRANT_API_KEY=qdt_tu_api_key_aquí
+QDRANT_URL=https://tu-cluster-url.qdrant.tech
 
-# Búsqueda
-MAX_CHUNKS_RETURN=5
-
-# Rutas
-DOCUMENTS_PATH=./docs
-INDEX_PATH=./data/faiss_index
-METADATA_PATH=./data/metadata.json
-
-# Rendimiento
-BATCH_SIZE=32
-DEVICE=cpu
+# Configuraciones opcionales:
+EMBEDDING_MODEL=text-embedding-3-small  # OpenAI model (1536 dims)
+CHUNK_SIZE=512                          # Tamaño de chunk
+CHUNK_OVERLAP=64                        # Solapamiento entre chunks
+MAX_CHUNKS_RETURN=5                     # Resultados por búsqueda
+BATCH_SIZE=32                           # Batch size para API calls
 ```
 
-### Parámetros del sistema
+## 📊 Datos Procesados Actuales
 
-- **CHUNK_SIZE**: Tamaño máximo de chunk en tokens (default: 512)
-- **CHUNK_OVERLAP**: Solapamiento entre chunks (default: 64) 
-- **EMBEDDING_MODEL**: Modelo Sentence Transformers (default: all-MiniLM-L6-v2)
-- **MAX_CHUNKS_RETURN**: Resultados máximos por búsqueda (default: 5)
+### Estadísticas del Sistema:
+- **6 candidatos**: Jose Antonio Kast R, Harold Mayne-Nicholls, Eduardo Artes, Johannes Kaiser, Evelyn Matthei, Jeannette Jara
+- **3,274 chunks** procesados con contenido real
+- **9 temas detectados**: medio_ambiente, educación, seguridad, vivienda, economía, pensiones, salud, general, transporte
+- **4 tipos de propuestas**: meta_cuantitativa, diagnostico, descripcion_general, propuesta_especifica
+- **Embeddings**: 1536 dimensiones (OpenAI text-embedding-3-small)
 
-## 📊 Modelos Soportados
-
-### Sentence Transformers recomendados:
-
-- **all-MiniLM-L6-v2**: Rápido, 384 dim, buena calidad general
-- **all-mpnet-base-v2**: Mejor calidad, 768 dim, más lento
-- **multi-qa-mpnet-base-dot-v1**: Optimizado para Q&A
-- **paraphrase-multilingual-MiniLM-L12-v2**: Soporte multiidioma
+### Extracción Dinámica:
+- **Candidatos**: Extraídos automáticamente de nombres de archivo `Programa_[Nombre].md`
+- **Temas**: Clasificación automática basada en contenido
+- **Páginas**: Procesamiento respetando marcadores de página
+- **Contenido**: Almacenamiento y recuperación de texto original completo
 
 ## 🔍 Tipos de Índice FAISS
 
@@ -196,59 +203,71 @@ DEVICE=cpu
 - **IndexFlatL2**: Búsqueda exacta con distancia L2
 - **IndexIVFFlat**: Búsqueda aproximada para datasets grandes
 
-## 📈 Métricas de Rendimiento
+## 📈 Estado Actual del Sistema
 
-### Objetivo del MVP:
-- ⚡ Indexing: < 1 min por 100 documentos
-- ⚡ Búsqueda: < 100ms por query
-- 🎯 Relevancia: Top-3 accuracy > 70%
-- 💾 Memoria: < 500MB para 10K chunks
+### Datos Reales Procesados:
+- ✅ **6 candidatos presidenciales** procesados automáticamente
+- ✅ **3,274 chunks** con contenido real (no placeholders)
+- ✅ **9 categorías temáticas** detectadas automáticamente
+- ✅ **4 tipos de propuestas** clasificadas por contenido
+- ✅ **Embeddings 1536D** generados con OpenAI API
+- ✅ **Upload directo** a Qdrant Cloud integrado en CLI
 
-### Benchmark típico:
+### Benchmark con datos reales:
 ```bash
 python -m src.cli benchmark
 
-# Ejemplo con datos reales:
-# ✅ 3,274 documentos procesados
-# ✅ Candidato: Jeannette Jara (Partido Socialista)
-# ✅ 9 temas: salud, pensiones, educación, etc.
-# ✅ 4 tipos propuestas detectados automáticamente
+# Métricas actuales:
+# ✅ 3,274 chunks procesados exitosamente
+# ✅ Contenido real almacenado y recuperable
+# ✅ Metadatos políticos completos para todos los candidatos
+# ✅ Sistema listo para producción en Qdrant Cloud
 ```
 
-## 🧪 Testing
+## 🧪 Testing y Ejemplos
 
-### Documentos de ejemplo incluidos:
-- `docs/ejemplo_politica.md`: Política de transformación digital
-- `docs/inteligencia_artificial.md`: IA en el gobierno
+### Documentos procesados:
+- 6 programas presidenciales completos en `docs/`
+- Formato: `Programa_[Nombre_Candidato].md`
+- Con marcadores de página y estructura jerárquica
 
-### Queries de prueba políticas:
-- "¿Qué propone Jara para pensiones?"
-- "Políticas de salud pública"  
-- "Propuestas de vivienda"
-- "Medidas de seguridad ciudadana"
-- "Educación pública y reformas"
+### Queries de prueba con datos reales:
+```bash
+# Búsquedas temáticas
+python -m src.cli search "pensiones sistema previsional"
+python -m src.cli search "salud pública atención primaria"
+python -m src.cli search "seguridad ciudadana delincuencia"
+python -m src.cli search "educación reforma universitaria"
 
-## 📊 Qué Datos Procesa
+# Búsquedas por candidato (en chat mode)
+python -m src.cli chat
+Query: ¿Qué propone Evelyn Matthei para pensiones?
+Query: Propuestas de Jeannette Jara en salud
+```
 
-**Input**: Documentos .md de programas políticos con:
+## 📊 Arquitectura de Datos
+
+**Input**: 6 programas políticos (.md) con:
 - Marcadores de página: `[START OF PAGE: ##]` y `[END OF PAGE: ##]`
 - Headers jerárquicos (##, ###, ####)
-- Contenido de propuestas políticas
+- Contenido de propuestas políticas estructuradas
 
 **Output Procesado**:
-- **3,274 chunks** vectorizados
-- **Metadatos políticos**: candidato, partido, página, tema, tipo propuesta  
-- **9 temas detectados**: salud, pensiones, educación, seguridad, etc.
-- **4 tipos propuestas**: específicas, diagnósticos, metas, descripciones
+- **3,274 chunks** con contenido real recuperable
+- **Metadatos políticos**: candidato extraído dinámicamente, página, tema, tipo propuesta  
+- **6 candidatos**: Procesados automáticamente desde nombres de archivo
+- **9 temas detectados**: medio_ambiente, educación, seguridad, vivienda, economía, pensiones, salud, general, transporte
+- **4 tipos propuestas**: meta_cuantitativa, diagnostico, descripcion_general, propuesta_especifica
 
 ## 🔄 Flujo de Procesamiento Político
 
-1. **Extracción Páginas**: Detecta marcadores `[START/END OF PAGE: ##]` 
-2. **Chunking Inteligente**: Respeta límites de página + headers semánticos
-3. **Clasificación Automática**: Asigna temas y tipos según contenido
-4. **Embeddings**: Sentence Transformers (384 dimensiones)
-5. **Export Qdrant**: Formato cloud-ready con metadatos políticos
-6. **Deploy**: Upload a Qdrant Cloud para chatbot web
+1. **Extracción Dinámica**: Candidatos desde nombres `Programa_[Nombre].md`
+2. **Chunking por Páginas**: Respeta marcadores `[START/END OF PAGE: ##]`
+3. **Clasificación Automática**: Detecta 9 temas y 4 tipos de propuestas
+4. **Embeddings OpenAI**: text-embedding-3-small (1536 dimensiones)
+5. **Almacenamiento**: FAISS + contenido original para recuperación
+6. **Export Qdrant**: JSON cloud-ready con metadatos completos
+7. **Upload Cloud**: Deploy directo a Qdrant Cloud con CLI integrado
 
 ## 🌐 Para tu Chatbot Web
 
@@ -256,28 +275,49 @@ Una vez en Qdrant Cloud, puedes hacer queries como:
 
 ```python
 # ¿Qué propone Jara para pensiones?
-client.search(
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+
+client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+
+results = client.search(
     collection_name="political_documents",
-    query_vector=embedding("pensiones"),
-    query_filter={"must": [
-        {"key": "candidate", "match": {"value": "Jeannette Jara"}},
-        {"key": "topic_category", "match": {"value": "pensiones"}}
-    ]},
+    query_vector=embedding("pensiones sistema previsional"),
+    query_filter=models.Filter(must=[
+        models.FieldCondition(key="candidate", match=models.MatchValue(value="Jeannette Jara")),
+        models.FieldCondition(key="topic_category", match=models.MatchValue(value="pensiones"))
+    ]),
     limit=5
 )
+
+# Cada resultado incluye:
+# - result.payload["content"]: Texto original completo
+# - result.payload["candidate"]: Candidato extraído dinámicamente  
+# - result.payload["page_number"]: Página del documento original
+# - result.score: Similitud semántica (0-1)
 ```
 
-## 🚀 Roadmap
+## 🚀 Estado del Proyecto
 
-### ✅ Completado:
-- Procesamiento político especializado
-- Export a Qdrant Cloud
-- Metadatos ricos con páginas y temas
+### ✅ Completado (Sistema RAG Funcional):
+- ✅ **Extracción dinámica de candidatos** - No más hardcoding
+- ✅ **Contenido real recuperable** - Sin placeholders
+- ✅ **OpenAI embeddings** - 1536 dimensiones production-ready
+- ✅ **Upload integrado** - CLI comando para Qdrant Cloud
+- ✅ **6 candidatos procesados** - Sistema completamente funcional
+- ✅ **3,274 chunks** con metadatos políticos completos
 
 ### 🔄 Siguiente (Tu Chatbot Web):
 1. **Frontend**: React/Vue con interface de chat
-2. **Backend**: API que conecte a Qdrant Cloud
-3. **LLM Integration**: OpenAI/Anthropic para generar respuestas
+2. **Backend**: API que conecte a Qdrant Cloud 
+3. **LLM Integration**: OpenAI/Anthropic para generar respuestas contextuales
 4. **Deploy**: Vercel/Netlify para el chatbot web
+
+### 📋 Cambios Recientes:
+- Migración de Sentence Transformers a OpenAI API
+- Extracción dinámica de candidatos (elimina limitaciones hardcoded)
+- Almacenamiento de contenido original para recuperación completa
+- CLI integrado para upload directo a Qdrant Cloud
+- Limpieza de scripts duplicados y archivos legacy
 
 

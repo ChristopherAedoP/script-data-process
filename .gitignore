@@ -181,3 +181,9 @@ temp/
 
 # Local configuration
 config.local
+
+# Qdrant export files (except the cloud upload script)
+data/qdrant_export/
+!data/qdrant_export/upload_to_qdrant_cloud.py
+
+.claude

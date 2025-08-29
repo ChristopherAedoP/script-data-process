@@ -2,6 +2,7 @@
 RAG System - Main orchestrator for the RAG MVP
 Combines document processing, embeddings, and vector search
 """
+import json
 import time
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
@@ -16,11 +17,12 @@ from .vector_store import FAISSVectorStore
 class RAGSystem:
     """Main RAG system orchestrator"""
     
-    def __init__(self, embedding_model: Optional[str] = None, device: Optional[str] = None):
+    def __init__(self, embedding_model: Optional[str] = None):
         self.document_processor = DocumentProcessor()
-        self.embedding_generator = EmbeddingGenerator(embedding_model, device)
+        self.embedding_generator = EmbeddingGenerator(embedding_model)
         self.vector_store = None
         self.is_indexed = False
+        self.original_texts = []  # Store original chunk texts for content retrieval
         
     def index_documents(
         self, 
@@ -51,6 +53,9 @@ class RAGSystem:
         if not texts:
             return {"status": "error", "message": "No documents found to index"}
         
+        # Store original texts for content retrieval
+        self.original_texts = texts.copy()
+        
         # Generate embeddings
         embeddings = self.embedding_generator.encode_texts(texts)
         
@@ -65,6 +70,11 @@ class RAGSystem:
         # Save index and metadata
         self.vector_store.save_index(index_path, index_path.replace('.faiss', '_metadata.pkl'))
         self.document_processor.save_metadata(metadata, metadata_path)
+        
+        # Save original texts for content retrieval
+        texts_path = metadata_path.replace('metadata.json', 'original_texts.json')
+        with open(texts_path, 'w', encoding='utf-8') as f:
+            json.dump(self.original_texts, f, ensure_ascii=False, indent=2)
         
         total_time = time.time() - start_time
         self.is_indexed = True
@@ -87,13 +97,22 @@ class RAGSystem:
     
     def _load_existing_index(self, index_path: str, metadata_path: str) -> None:
         """Load existing index and metadata"""
-        # Load model first to get embedding dimension
-        self.embedding_generator.load_model()
+        # Get embedding dimension directly
         embedding_dim = self.embedding_generator.embedding_dim
         
         # Create vector store and load index
         self.vector_store = FAISSVectorStore(embedding_dim)
         self.vector_store.load_index(index_path, index_path.replace('.faiss', '_metadata.pkl'))
+        
+        # Load original texts if available
+        texts_path = metadata_path.replace('metadata.json', 'original_texts.json')
+        if Path(texts_path).exists():
+            with open(texts_path, 'r', encoding='utf-8') as f:
+                self.original_texts = json.load(f)
+            print(f"Loaded {len(self.original_texts)} original texts")
+        else:
+            self.original_texts = []
+            print("Warning: Original texts not found - content retrieval will be limited")
         
         self.is_indexed = True
         print("Loaded existing index successfully")
@@ -168,11 +187,21 @@ class RAGSystem:
         # Get search results
         results = self.search(query, k, min_similarity_score)
         
-        # We need to map back to original texts to get content
-        # For now, we'll indicate that content needs to be retrieved separately
+        # Add real content to results
         for result in results:
-            result["content_preview"] = f"[Content from chunk {result['chunk_index']} - implement content retrieval]"
-            result["note"] = "Full content retrieval requires mapping back to processed texts"
+            chunk_index = result['chunk_index']
+            if 0 <= chunk_index < len(self.original_texts):
+                full_content = self.original_texts[chunk_index]
+                # Truncate if too long
+                if len(full_content) > max_content_length:
+                    result["content_preview"] = full_content[:max_content_length] + "..."
+                    result["content"] = full_content  # Include full content
+                else:
+                    result["content_preview"] = full_content
+                    result["content"] = full_content
+            else:
+                result["content_preview"] = f"[Content not available for chunk {chunk_index}]"
+                result["content"] = ""
         
         return results
     
@@ -180,7 +209,7 @@ class RAGSystem:
         """Get comprehensive system statistics"""
         stats = {
             "is_indexed": self.is_indexed,
-            "model_info": self.embedding_generator.get_model_info() if self.embedding_generator.model else None,
+            "model_info": self.embedding_generator.get_model_info(),
         }
         
         if self.vector_store:
@@ -263,50 +292,42 @@ class RAGSystem:
             
             all_embeddings = np.array(all_embeddings)
             
-            # We need to reconstruct the original texts
-            # For now, we'll use a placeholder approach
-            texts = []
-            processed_metadata = []
+            # Use stored original texts or load from file
+            if not self.original_texts:
+                texts_path = config.METADATA_PATH.replace('metadata.json', 'original_texts.json')
+                if Path(texts_path).exists():
+                    with open(texts_path, 'r', encoding='utf-8') as f:
+                        self.original_texts = json.load(f)
+                    print(f"Loaded {len(self.original_texts)} original texts for export")
+                else:
+                    raise ValueError("Original texts not found. Please reindex documents with the updated system.")
             
-            for i, meta in enumerate(metadata[:len(all_embeddings)]):
-                # This is a limitation - we don't store original chunk text
-                # In production, you'd want to store this or reconstruct from source
-                texts.append(f"[Content from {meta.source_file}, chunk {meta.chunk_index}]")
-                processed_metadata.append(meta)
+            # Use real content and metadata
+            texts = self.original_texts[:len(all_embeddings)]  # Ensure same length
+            processed_metadata = metadata[:len(all_embeddings)]
             
             # Create exporter and export
             exporter = QdrantExporter()
             output_path = Path(output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
             
-            # Export to JSON
+            # Export to JSON only
             json_path = output_path / f"{collection_name}.json"
             qdrant_data = exporter.export_to_qdrant_json(
                 texts, all_embeddings, processed_metadata, 
                 str(json_path), collection_name
             )
             
-            # Create upload script
-            script_path = output_path / f"upload_{collection_name}.py"
-            exporter.create_qdrant_collection_script(qdrant_data, str(script_path))
-            
-            # Create filters guide
-            guide_path = output_path / f"{collection_name}_filters_guide.md"
-            exporter.export_search_filters_guide(qdrant_data["stats"], str(guide_path))
-            
             print(f"Qdrant export completed:")
             print(f"  Data: {json_path}")
-            print(f"  Upload script: {script_path}")
-            print(f"  Filters guide: {guide_path}")
+            print(f"  Use existing upload_to_qdrant_cloud.py to upload to Qdrant Cloud")
             
             return {
                 "status": "success",
                 "collection_name": collection_name,
                 "total_points": len(texts),
                 "output_files": {
-                    "data": str(json_path),
-                    "upload_script": str(script_path),
-                    "filters_guide": str(guide_path)
+                    "data": str(json_path)
                 },
                 "stats": qdrant_data["stats"]
             }

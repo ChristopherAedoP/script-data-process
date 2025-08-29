@@ -104,21 +104,18 @@ class DocumentProcessor:
         return pages
 
     def extract_candidate_info_from_filename(self, filename: str) -> tuple[Optional[str], Optional[str]]:
-        """Extract candidate and party info from filename"""
-        # Simple extraction from filename pattern like "Programa_Jeannette_Jara.md"
+        """Extract candidate info dynamically from filename"""
+        # Extract from filename pattern like "Programa_Jeannette_Jara.md" or "Programa_Jose_Antonio_Kast_R.md"
         name_part = Path(filename).stem.replace('Programa_', '').replace('_', ' ')
         
-        # This could be enhanced with a mapping dictionary for known candidates/parties
-        candidate_mapping = {
-            'Jeannette Jara': 'Partido Socialista',
-            'José Antonio Kast': 'Partido Republicano',
-            # Add more mappings as needed
-        }
+        # Clean up common filename patterns
+        candidate = name_part.strip()
+        if not candidate:
+            return None, None
         
-        candidate = name_part if name_part in candidate_mapping else None
-        party = candidate_mapping.get(candidate)
-        
-        return candidate, party
+        # Return candidate name directly - no hardcoded mapping required
+        # Party information can be extracted from document content if needed
+        return candidate, None
 
     def classify_topic_from_headers(self, headers: Dict[str, str]) -> str:
         """Classify topic category from headers"""

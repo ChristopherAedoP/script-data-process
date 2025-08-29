@@ -3,7 +3,9 @@ CLI interface for RAG MVP
 Provides command-line interface for indexing and searching documents
 """
 import json
+import os
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -11,7 +13,6 @@ import click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import config
@@ -34,6 +35,7 @@ Commands:
   benchmark     - Run performance benchmarks
   chat          - Interactive chat mode
   export-qdrant - Export data to Qdrant format
+  upload-cloud  - Upload data to Qdrant Cloud
 """
     console.print(Panel(welcome_text, title="Welcome", border_style="blue"))
 
@@ -471,8 +473,6 @@ def export_qdrant(output_dir: str, collection_name: str, model: Optional[str]):
             table.add_row("Collection Name", result["collection_name"])
             table.add_row("Total Points", str(result["total_points"]))
             table.add_row("Data File", result["output_files"]["data"])
-            table.add_row("Upload Script", result["output_files"]["upload_script"])
-            table.add_row("Filters Guide", result["output_files"]["filters_guide"])
             
             console.print(table)
             
@@ -493,14 +493,185 @@ def export_qdrant(output_dir: str, collection_name: str, model: Optional[str]):
                 console.print(stats_table)
                 
                 print_info("\nNext steps:")
-                print("1. Install Qdrant: docker run -p 6333:6333 qdrant/qdrant")
-                print(f"2. Run upload script: python {result['output_files']['upload_script']}")
-                print(f"3. Check filters guide: {result['output_files']['filters_guide']}")
+                print("1. Set environment variables: QDRANT_API_KEY and QDRANT_URL")
+                print("2. Run upload command: python -m src.cli upload-cloud")
+                print("3. Test queries in Qdrant Cloud dashboard")
         else:
             print_error("Export failed")
             
     except Exception as e:
         print_error(f"Export failed: {e}")
+
+
+@cli.command()
+@click.option(
+    "--data-file", 
+    default="./data/qdrant_export/political_documents.json",
+    help="Path to the JSON data file to upload"
+)
+@click.option(
+    "--collection-name", 
+    default="political_documents", 
+    help="Qdrant collection name"
+)
+@click.option(
+    "--api-key", 
+    default=None, 
+    help="Qdrant API key (or set QDRANT_API_KEY env var)"
+)
+@click.option(
+    "--url", 
+    default=None, 
+    help="Qdrant cluster URL (or set QDRANT_URL env var)"
+)
+def upload_cloud(data_file: str, collection_name: str, api_key: Optional[str], url: Optional[str]):
+    """Upload data to Qdrant Cloud"""
+    
+    try:
+        # Get credentials from env vars or options
+        api_key = api_key or os.getenv("QDRANT_API_KEY")
+        url = url or os.getenv("QDRANT_URL")
+        
+        # Validate credentials
+        if not api_key:
+            print_error("QDRANT_API_KEY not found")
+            print("Set it with: export QDRANT_API_KEY=your_api_key_here")
+            print("Or use --api-key option")
+            return
+        
+        if not url:
+            print_error("QDRANT_URL not found")
+            print("Set it with: export QDRANT_URL=https://your-cluster-url.qdrant.tech")
+            print("Or use --url option")
+            return
+        
+        # Check if data file exists
+        if not Path(data_file).exists():
+            print_error(f"Data file not found: {data_file}")
+            print("Run 'python -m src.cli export-qdrant' first")
+            return
+        
+        print_info("Starting upload to Qdrant Cloud...")
+        print_info(f"Cluster: {url}")
+        print_info(f"API Key: {api_key[:8]}...")
+        print_info(f"Data file: {data_file}")
+        
+        # Import required modules
+        from qdrant_client import QdrantClient
+        from qdrant_client.http import models
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Connecting to Qdrant Cloud...", total=None)
+            
+            # Initialize client
+            client = QdrantClient(url=url, api_key=api_key)
+            
+            progress.update(task, description="Checking collection...")
+            
+            # Create collection if it doesn't exist
+            try:
+                client.get_collection(collection_name)
+                print_info(f"Collection {collection_name} already exists")
+            except:
+                client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=models.VectorParams(
+                        size=1536,  # text-embedding-3-small dimension
+                        distance=models.Distance.COSINE
+                    )
+                )
+                print_success(f"Created collection {collection_name}")
+            
+            progress.update(task, description="Loading data...")
+            
+            # Load points from JSON file
+            with open(data_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            points = data["points"]
+            total_points = len(points)
+            
+            print_info(f"Uploading {total_points} points...")
+            
+            # Upload points in batches
+            batch_size = 32
+            total_batches = (total_points + batch_size - 1) // batch_size
+            
+            for i in range(0, total_points, batch_size):
+                batch = points[i:i + batch_size]
+                batch_num = i // batch_size + 1
+                
+                progress.update(task, description=f"Uploading batch {batch_num}/{total_batches}...")
+                
+                qdrant_points = [
+                    models.PointStruct(
+                        id=point["id"],
+                        vector=point["vector"],
+                        payload=point["payload"]
+                    )
+                    for point in batch
+                ]
+                
+                # Upload with retry logic
+                max_retries = 3
+                success = False
+                for attempt in range(max_retries):
+                    try:
+                        client.upsert(
+                            collection_name=collection_name,
+                            points=qdrant_points
+                        )
+                        success = True
+                        break
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            wait_time = 2 ** attempt
+                            print_error(f"Error uploading batch {batch_num} (attempt {attempt + 1}/{max_retries}): {e}")
+                            print_info(f"Retrying in {wait_time} seconds...")
+                            time.sleep(wait_time)
+                        else:
+                            print_error(f"Failed to upload batch {batch_num} after {max_retries} attempts: {e}")
+                            return
+                
+                if success:
+                    print_success(f"Uploaded batch {batch_num}/{total_batches} ({len(batch)} points)")
+        
+        print_success(f"Successfully uploaded {total_points} points to Qdrant Cloud!")
+        
+        # Display collection info
+        try:
+            collection_info = client.get_collection(collection_name)
+            
+            info_table = Table(title="Collection Information")
+            info_table.add_column("Property", style="cyan")
+            info_table.add_column("Value", style="magenta")
+            
+            info_table.add_row("Collection Name", collection_name)
+            info_table.add_row("Vector Count", str(collection_info.vectors_count))
+            info_table.add_row("Vector Size", str(collection_info.config.params.vectors.size))
+            info_table.add_row("Distance", str(collection_info.config.params.vectors.distance))
+            
+            console.print(info_table)
+            
+        except Exception as e:
+            print_error(f"Could not fetch collection info: {e}")
+        
+        print_info("\nNext steps:")
+        print("1. Test queries using Qdrant Cloud dashboard")
+        print("2. Check the filters guide for query examples")
+        print("3. Integrate with your web chatbot")
+            
+    except ImportError:
+        print_error("qdrant-client not installed")
+        print("Install with: pip install qdrant-client")
+    except Exception as e:
+        print_error(f"Upload failed: {e}")
+        if "--verbose" in sys.argv:
+            console.print_exception()
 
 
 def main():
