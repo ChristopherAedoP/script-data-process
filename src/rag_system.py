@@ -84,7 +84,7 @@ class RAGSystem:
             "documents_processed": len(set(meta.source_file for meta in metadata)),
             "chunks_created": len(texts),
             "embeddings_generated": len(embeddings),
-            "embedding_dimension": embedding_dim,
+            "dimensions": embedding_dim,
             "index_type": index_type,
             "total_time_seconds": round(total_time, 2),
             "avg_time_per_chunk_ms": round((total_time / len(texts)) * 1000, 2)
@@ -320,7 +320,7 @@ class RAGSystem:
             
             print(f"Qdrant export completed:")
             print(f"  Data: {json_path}")
-            print(f"  Use existing upload_to_qdrant_cloud.py to upload to Qdrant Cloud")
+            print(f"  Use CLI command: python -m src.cli upload-cloud")
             
             return {
                 "status": "success",

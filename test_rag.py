@@ -50,7 +50,7 @@ def test_rag_system():
         if stats.get('model_info'):
             model = stats['model_info']
             print(f"Model: {model['model_name']}")
-            print(f"Dimensions: {model['embedding_dimension']}")
+            print(f"Dimensions: {model['dimensions']}")
             print(f"Device: {model['device']}")
         if stats.get('vector_store'):
             vs = stats['vector_store']

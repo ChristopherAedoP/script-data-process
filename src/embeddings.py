@@ -117,9 +117,13 @@ class EmbeddingGenerator:
         Returns:
             dict: Diccionario con información del modelo.
         """
+        from datetime import date
         # text-embedding-3-small siempre genera 1536 dimensiones
         return {
             "model_name": self.model_name,
-            "embedding_dimension": self.embedding_dim, 
+            "dimensions": self.embedding_dim, 
             "device": "cloud (OpenAI API)",
+            "language": "es",
+            "generated_date": date.today().strftime("%Y-%m-%d")
         }
+    

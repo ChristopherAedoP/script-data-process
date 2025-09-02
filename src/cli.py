@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import config
 from .rag_system import RAGSystem
+from .direct_processor import DirectProcessor
 
 console = Console()
 
@@ -24,9 +25,9 @@ console = Console()
 def print_welcome():
     """Print welcome message"""
     welcome_text = """
-RAG MVP - Local Document Search System
-======================================
-Local embeddings with Sentence Transformers + FAISS
+RAG MVP - Political Document Processing System
+==============================================
+OpenAI embeddings + Qdrant Cloud deployment
 
 Commands:
   index         - Index documents from a directory
@@ -36,6 +37,7 @@ Commands:
   chat          - Interactive chat mode
   export-qdrant - Export data to Qdrant format
   upload-cloud  - Upload data to Qdrant Cloud
+  process-direct - Process documents directly to Qdrant (file-by-file)
 """
     console.print(Panel(welcome_text, title="Welcome", border_style="blue"))
 
@@ -129,11 +131,11 @@ def index(path: str, force: bool, model: Optional[str], index_type: str):
             table.add_row("Documents Processed", str(stats["documents_processed"]))
             table.add_row("Chunks Created", str(stats["chunks_created"]))
             table.add_row("Embeddings Generated", str(stats["embeddings_generated"]))
-            table.add_row("Embedding Dimension", str(stats["embedding_dimension"]))
+            table.add_row("Embedding Dimension", str(stats["dimensions"]))
             table.add_row("Index Type", stats["index_type"])
             table.add_row("Total Time", f"{stats['total_time_seconds']}s")
             table.add_row("Avg Time per Chunk", f"{stats['avg_time_per_chunk_ms']}ms")
-            
+                        
             console.print(table)
             
         elif stats["status"] == "loaded_existing":
@@ -279,7 +281,7 @@ def stats(model: Optional[str]):
             model_table.add_column("Value", style="magenta")
             
             model_table.add_row("Model Name", model_info["model_name"])
-            model_table.add_row("Embedding Dimension", str(model_info["embedding_dimension"]))
+            model_table.add_row("Embedding Dimension", str(model_info["dimensions"]))
             model_table.add_row("Device", model_info["device"])
             model_table.add_row("Max Sequence Length", str(model_info.get("max_seq_length", "Unknown")))
             
@@ -487,15 +489,27 @@ def export_qdrant(output_dir: str, collection_name: str, model: Optional[str]):
                 stats_table.add_row("Candidates", str(len(stats["candidates"])))
                 stats_table.add_row("Parties", str(len(stats["parties"])))
                 stats_table.add_row("Topics", str(len(stats["topics"])))
+                stats_table.add_row("Subcategories", str(len(stats.get("subcategories", []))))
+                stats_table.add_row("Taxonomy Paths", str(len(stats.get("taxonomy_paths", []))))
                 stats_table.add_row("Proposal Types", str(len(stats["proposal_types"])))
-                stats_table.add_row("Vector Dimension", str(stats["embedding_dimension"]))
+                stats_table.add_row("Vector Dimension", str(stats["dimensions"]))
+                stats_table.add_row("Export Date", stats.get("export_date", "legacy"))
                 
                 console.print(stats_table)
+                
+                print_info("\nQueries Examples (Use in Qdrant Cloud):")
+                if stats.get("candidates"):
+                    print(f"Candidates: {', '.join(stats['candidates'][:3])}{'...' if len(stats['candidates']) > 3 else ''}")
+                if stats.get("topics"):
+                    print(f"Topics: {', '.join(stats['topics'][:5])}{'...' if len(stats['topics']) > 5 else ''}")
+                if stats.get("proposal_types"):
+                    print(f"Proposal types: {', '.join(stats['proposal_types'])}")
                 
                 print_info("\nNext steps:")
                 print("1. Set environment variables: QDRANT_API_KEY and QDRANT_URL")
                 print("2. Run upload command: python -m src.cli upload-cloud")
                 print("3. Test queries in Qdrant Cloud dashboard")
+                print("4. See readme.md for Qdrant query examples")
         else:
             print_error("Export failed")
             
@@ -651,9 +665,25 @@ def upload_cloud(data_file: str, collection_name: str, api_key: Optional[str], u
             info_table.add_column("Value", style="magenta")
             
             info_table.add_row("Collection Name", collection_name)
-            info_table.add_row("Vector Count", str(collection_info.vectors_count))
-            info_table.add_row("Vector Size", str(collection_info.config.params.vectors.size))
-            info_table.add_row("Distance", str(collection_info.config.params.vectors.distance))
+            
+            # Safe access to collection info with fallbacks
+            try:
+                points_count = getattr(collection_info, 'points_count', 'Unknown')
+                info_table.add_row("Vector Count", str(points_count))
+            except:
+                info_table.add_row("Vector Count", str(total_points))  # Fallback to uploaded count
+            
+            try:
+                vector_size = collection_info.config.params.vectors.size
+                info_table.add_row("Vector Size", str(vector_size))
+            except:
+                info_table.add_row("Vector Size", "1536")  # Known dimension
+            
+            try:
+                distance = collection_info.config.params.vectors.distance
+                info_table.add_row("Distance", str(distance))
+            except:
+                info_table.add_row("Distance", "Cosine")  # Known configuration
             
             console.print(info_table)
             
@@ -670,6 +700,88 @@ def upload_cloud(data_file: str, collection_name: str, api_key: Optional[str], u
         print("Install with: pip install qdrant-client")
     except Exception as e:
         print_error(f"Upload failed: {e}")
+        if "--verbose" in sys.argv:
+            console.print_exception()
+
+
+@cli.command()
+@click.option(
+    "--docs-path", 
+    default="./docs", 
+    help="Path to documents directory containing .md files"
+)
+@click.option(
+    "--collection-name", 
+    default="political_documents", 
+    help="Qdrant collection name"
+)
+def process_direct(docs_path: str, collection_name: str):
+    """Process documents directly to Qdrant Cloud (file-by-file for optimal data quality)"""
+    
+    try:
+        print_info("Starting Direct Processing to Qdrant Cloud")
+        print_info(f"Documents path: {docs_path}")
+        print_info(f"Target collection: {collection_name}")
+        
+        print_info("Initializing Direct Processor...")
+        
+        # Initialize DirectProcessor
+        processor = DirectProcessor()
+        
+        print_info("Processing documents...")
+        
+        # Process all documents directly to Qdrant
+        result = processor.process_all_documents(docs_path, collection_name)
+        
+        if result["status"] in ["success", "partial"]:
+            print_success("Direct processing completed!")
+            
+            # Display results table
+            table = Table(title="Direct Processing Summary")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="magenta")
+            
+            table.add_row("Collection Name", result["collection_name"])
+            table.add_row("Files Processed", str(result["files_processed"]))
+            table.add_row("Files Failed", str(result["files_failed"]))
+            table.add_row("Total Chunks", str(result["total_chunks"]))
+            table.add_row("Total Embeddings", str(result["total_embeddings"]))
+            table.add_row("Total Points Uploaded", str(result["total_points"]))
+            table.add_row("Total Time", f"{result['total_time']}s")
+            table.add_row("Avg Time per File", f"{result['avg_time_per_file']}s")
+            
+            console.print(table)
+            
+            # Display candidates processed
+            if result["candidates"]:
+                candidates_table = Table(title="Candidates Processed")
+                candidates_table.add_column("Candidate", style="green")
+                
+                for candidate in result["candidates"]:
+                    candidates_table.add_row(candidate)
+                
+                console.print(candidates_table)
+            
+            if result["status"] == "partial":
+                print_error(f"{result['files_failed']} files failed to process")
+                
+            print_info("\nNext steps:")
+            print("1. Review local export files in ./data/direct_export/")
+            print("   - processed_data.json: All points with complete metadata")
+            print("   - processing_log.json: Detailed per-file processing log")
+            print("   - summary_stats.json: Session statistics and technical details")
+            print("2. Verify data in Qdrant Cloud dashboard")
+            print("3. Test political queries with filters")
+            print("4. Integrate with web chatbot using @qdrant/js-client-rest")
+            
+        else:
+            print_error(f"Processing failed: {result.get('message', 'Unknown error')}")
+            
+    except ValueError as e:
+        # Environment variable errors
+        print_error(str(e))
+    except Exception as e:
+        print_error(f"Direct processing failed: {e}")
         if "--verbose" in sys.argv:
             console.print_exception()
 

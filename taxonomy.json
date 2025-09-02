@@ -1,0 +1,237 @@
+{
+  "version": "1.0",
+  "description": "Taxonomía jerárquica para clasificación de programas políticos chilenos 2025",
+  "last_updated": "2025-01-01",
+  "categories": {
+    "Pensiones": {
+      "description": "Sistema previsional, AFP, pensión básica universal",
+      "subcategories": {
+        "AFP": {
+          "keywords": ["afp", "administradora de fondos", "fondos de pensiones", "cotización", "cuenta individual", "capitalización", "jubilación", "pensión", "previsional", "sistema de pensiones", "reformar sistema pensiones", "reformas al sistema previsional"],
+          "description": "Sistema de AFP y administración privada"
+        },
+        "Pensión Básica Universal": {
+          "keywords": ["pensión básica", "universal", "pilar solidario", "pensión mínima", "garantía estatal"],
+          "description": "Pensión básica universal y pilares solidarios"
+        },
+        "Sistema de Reparto": {
+          "keywords": ["reparto", "sistema público", "solidario", "distribución", "generacional"],
+          "description": "Sistema de reparto y solidaridad intergeneracional"
+        },
+        "Financiamiento Previsional": {
+          "keywords": ["financiamiento", "cotización", "aporte", "presupuesto previsional", "recursos"],
+          "description": "Financiamiento del sistema previsional"
+        }
+      }
+    },
+    "Salud": {
+      "description": "Sistema de salud público y privado, atención médica",
+      "subcategories": {
+        "Isapres": {
+          "keywords": ["isapre", "seguro privado", "plan de salud", "cotización salud", "preexistencias"],
+          "description": "Instituciones de Salud Previsional privadas"
+        },
+        "Fonasa": {
+          "keywords": ["fonasa", "seguro público", "sistema público", "atención primaria", "hospital público"],
+          "description": "Fondo Nacional de Salud"
+        },
+        "Listas de Espera": {
+          "keywords": ["lista de espera", "cirugía", "operación", "especialista", "demora atención", "atención de salud", "servicios de salud", "tratamiento", "consultas"],
+          "description": "Reducción de listas de espera y tiempos de atención"
+        },
+        "Atención Primaria": {
+          "keywords": ["consultorio", "cesfam", "atención primaria", "médico general", "prevención"],
+          "description": "Fortalecimiento de la atención primaria"
+        },
+        "Medicamentos": {
+          "keywords": ["medicamento", "fármaco", "auge", "ges", "acceso medicamentos"],
+          "description": "Acceso a medicamentos y tratamientos"
+        }
+      }
+    },
+    "Educación": {
+      "description": "Sistema educativo escolar, superior y técnico-profesional",
+      "subcategories": {
+        "Educación Escolar": {
+          "keywords": ["educación básica", "media", "liceo", "colegio", "calidad educativa", "psu", "sistema educativo", "establecimientos educacionales", "violencia escolar", "enseñanza"],
+          "description": "Educación básica y media, calidad y equidad"
+        },
+        "Educación Superior": {
+          "keywords": ["universidad", "gratuidad", "cae", "crédito", "educación superior", "arancel"],
+          "description": "Educación superior, gratuidad y financiamiento"
+        },
+        "Educación Técnica": {
+          "keywords": ["técnico profesional", "cft", "instituto", "capacitación", "oficios"],
+          "description": "Educación técnico-profesional y capacitación"
+        },
+        "Formación Ciudadana": {
+          "keywords": ["formación ciudadana", "educación cívica", "democracia", "participación", "valores"],
+          "description": "Formación ciudadana y educación en valores"
+        }
+      }
+    },
+    "Trabajo": {
+      "description": "Empleo, salarios, jornada laboral y derechos del trabajador",
+      "subcategories": {
+        "Salario Mínimo": {
+          "keywords": ["salario mínimo", "sueldo mínimo", "ingreso mínimo", "remuneración básica", "trabajo digno", "empleo", "desempleo", "oportunidades", "trabajadores", "emprendedores", "trabajar", "generar empleos", "emprendimiento", "trabajar en paz", "oportunidad de trabajo", "mil personas desocupadas", "desocupados"],
+          "description": "Política de salario mínimo y generación de empleo"
+        },
+        "Jornada Laboral": {
+          "keywords": ["jornada laboral", "40 horas", "36 horas", "reducción jornada", "horario trabajo"],
+          "description": "Regulación de jornada laboral"
+        },
+        "Informalidad": {
+          "keywords": ["trabajo informal", "formalización", "microempresa", "trabajador independiente"],
+          "description": "Reducción de informalidad laboral"
+        },
+        "Derechos Laborales": {
+          "keywords": ["sindicato", "negociación colectiva", "huelga", "fuero laboral", "despido"],
+          "description": "Derechos sindicales y laborales"
+        }
+      }
+    },
+    "Economía": {
+      "description": "Crecimiento económico, inflación, costo de vida e inversión",
+      "subcategories": {
+        "Inflación": {
+          "keywords": ["inflación", "costo de vida", "precio", "canasta básica", "ipc", "emergencia económica", "crisis económica", "estancamiento", "desaceleración económica"],
+          "description": "Control de inflación y costo de vida"
+        },
+        "Endeudamiento": {
+          "keywords": ["deuda", "sobreendeudamiento", "retail", "cae", "crédito", "dicom"],
+          "description": "Endeudamiento familiar y alivio financiero"
+        },
+        "Crecimiento": {
+          "keywords": ["crecimiento", "pib", "productividad", "inversión", "desarrollo económico"],
+          "description": "Crecimiento económico e inversión"
+        },
+        "Impuestos": {
+          "keywords": ["impuesto", "tributación", "iva", "renta", "reforma tributaria"],
+          "description": "Sistema tributario y política fiscal"
+        }
+      }
+    },
+    "Seguridad": {
+      "description": "Seguridad ciudadana, narcotráfico y crimen organizado",
+      "subcategories": {
+        "Narcotráfico": {
+          "keywords": ["narcotráfico", "droga", "tráfico", "crimen organizado", "lavado dinero"],
+          "description": "Combate al narcotráfico y crimen organizado"
+        },
+        "Carabineros": {
+          "keywords": ["carabineros", "policía", "reforma policial", "orden público", "investigaciones"],
+          "description": "Fortalecimiento y reforma de Carabineros"
+        },
+        "Seguridad Barrial": {
+          "keywords": ["seguridad barrial", "delincuencia", "robo", "asalto", "prevención delito", "emergencia en seguridad", "emergencia seguridad", "inseguridad", "criminales", "impunidad", "seguro", "país seguro", "tranquilidad", "orden público", "violencia", "delito"],
+          "description": "Seguridad barrial y prevención del delito"
+        },
+        "Control Fronterizo": {
+          "keywords": ["frontera", "migración", "control fronterizo", "aduana", "inmigración"],
+          "description": "Control de fronteras y migración"
+        }
+      }
+    },
+    "Vivienda": {
+      "description": "Acceso a vivienda, déficit habitacional y desarrollo urbano",
+      "subcategories": {
+        "Déficit Habitacional": {
+          "keywords": ["déficit habitacional", "vivienda social", "subsidio habitacional", "casa propia", "sueño de la casa propia", "vivienda", "habitacional"],
+          "description": "Reducción del déficit habitacional"
+        },
+        "Campamentos": {
+          "keywords": ["campamento", "toma", "allegamiento", "vivienda precaria", "erradicación"],
+          "description": "Erradicación de campamentos"
+        },
+        "Arriendos": {
+          "keywords": ["arriendo", "alquiler", "mercado inmobiliario", "garantía estatal", "ley arriendo"],
+          "description": "Regulación del mercado de arriendos"
+        },
+        "Transporte Público": {
+          "keywords": ["metro", "micro", "transantiago", "red", "locomoción", "transporte público"],
+          "description": "Mejoramiento del transporte público"
+        },
+        "Planificación Urbana": {
+          "keywords": ["planificación urbana", "ciudad", "urbanización", "desarrollo urbano", "ordenamiento"],
+          "description": "Planificación y desarrollo urbano"
+        }
+      }
+    },
+    "Medioambiente": {
+      "description": "Protección ambiental, crisis hídrica y energías renovables",
+      "subcategories": {
+        "Crisis Hídrica": {
+          "keywords": ["agua", "sequía", "escasez", "recursos hídricos", "gestión agua"],
+          "description": "Gestión de recursos hídricos y crisis del agua"
+        },
+        "Energías Renovables": {
+          "keywords": ["energía renovable", "solar", "eólica", "limpia", "sustentable", "verde"],
+          "description": "Transición a energías renovables"
+        },
+        "Litio": {
+          "keywords": ["litio", "hidrógeno verde", "minería", "salar", "electromovilidad"],
+          "description": "Explotación sustentable del litio"
+        },
+        "Contaminación": {
+          "keywords": ["contaminación", "zona de sacrificio", "quintero", "temuco", "aire", "smog"],
+          "description": "Control de la contaminación ambiental"
+        }
+      }
+    },
+    "Regiones": {
+      "description": "Descentralización, desarrollo regional y equidad territorial",
+      "subcategories": {
+        "Descentralización": {
+          "keywords": ["descentralización", "gobierno regional", "municipio", "transferencia competencias", "regiones", "regional", "gobiernos regionales", "municipios", "desarrollo regional", "territorio", "territorial"],
+          "description": "Fortalecimiento de gobiernos regionales"
+        },
+        "Regiones Extremas": {
+          "keywords": ["región extrema", "norte", "sur", "aislamiento", "conectividad", "desarrollo regional"],
+          "description": "Desarrollo de regiones extremas"
+        },
+        "Zonas Rurales": {
+          "keywords": ["rural", "campo", "agricultura", "aislado", "conectividad rural"],
+          "description": "Desarrollo rural y zonas aisladas"
+        },
+        "Equidad Territorial": {
+          "keywords": ["equidad territorial", "convergencia", "desarrollo equilibrado", "recursos regionales"],
+          "description": "Equidad y desarrollo territorial"
+        }
+      }
+    },
+    "Institucionalidad": {
+      "description": "Constitución, probidad, transparencia y participación ciudadana",
+      "subcategories": {
+        "Constitución": {
+          "keywords": ["constitución", "nueva constitución", "reforma constitucional", "proceso constituyente"],
+          "description": "Nueva Constitución o reformas constitucionales"
+        },
+        "Probidad": {
+          "keywords": ["probidad", "transparencia", "corrupción", "ética pública", "accountability", "crisis de estado", "estado ineficaz", "burocracia", "gasto público", "aparato del estado", "crisis del estado", "mediocridad", "improvisación", "ideología", "falta de rumbo", "crisis", "decadencia", "estancamiento"],
+          "description": "Probidad y transparencia en el Estado"
+        },
+        "Financiamiento Político": {
+          "keywords": ["financiamiento político", "campaña", "gastos electorales", "lobby", "conflicto interés"],
+          "description": "Financiamiento de la política y lobby"
+        },
+        "Participación Ciudadana": {
+          "keywords": ["participación ciudadana", "consulta", "plebiscito", "sociedad civil", "democracia"],
+          "description": "Fortalecimiento de la participación ciudadana"
+        },
+        "Desigualdad": {
+          "keywords": ["desigualdad", "inequidad", "distribución", "justicia social", "brecha", "emergencia social", "pobreza", "crisis social", "exclusion", "marginalidad"],
+          "description": "Reducción de la desigualdad social"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "total_categories": 10,
+    "total_subcategories": 43,
+    "confidence_threshold": 0.25,
+    "fallback_category": "Institucionalidad",
+    "pdr_alignment": "optimized_for_30_citizen_questions",
+    "last_optimization": "2025-01-01_rag_enhancement"
+  }
+}
